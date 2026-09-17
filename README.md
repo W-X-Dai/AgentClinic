@@ -18,6 +18,72 @@
 - [05/17/2024] We release new results and support for GPT-4o!
 - [05/13/2024] 🔥 We release **AgentClinic: a multimodal agent benchmark to evaluate AI in simulated clinical environment**. We propose a multimodal benchmark based on language agents which simulate the clinical environment.  Checkout the [paper](media/AgentClinicPaper.pdf) and the [website](https://agentclinic.github.io/) for this code.
 
+## Local research extension version
+
+### v0.4.0 (2026-09-17)
+
+- Added a portable vLLM matrix harness for the RTX Pro 6000 host. It can inspect
+  local checkpoint metadata, launch one model at a time on loopback, run a smoke
+  test, execute the benchmark, persist failures, stop only the server process it
+  started, and continue to the next model.
+- Added OpenAI-compatible text/image requests using base64 data URLs and strict JSON
+  schema, plus matrix summaries that keep text-only models out of image denominators.
+- Matrix provenance includes GPU/driver, Python/platform, vLLM CLI/API versions,
+  inspected checkpoint metadata, and each exact launch command.
+- Added a reviewed example manifest for the 11 checkpoints under `/mnt/models`,
+  including special RTX Pro flags for Nemotron Omni and automatic local-config
+  inspection for the ambiguous `gemma-4-31b` directory.
+- This version adds reproducible tooling only; no result is claimed until it is run
+  on the target host. See the [vLLM instructions](medgemma_eval/README.md#rtx-pro-6000-vllm-matrix).
+
+### v0.3.0 (2026-09-17)
+
+- Added a Gemini Developer API adapter that reuses the backend's configured
+  `GEMINI_API_KEY` and `GEMINI_MODEL` without copying or recording the credential.
+- Completed the same 120-case, four-arm visual ablation with
+  `gemini-3.6-flash`: 480/480 responses were scorable. Context plus the matched
+  image reached 96.7%, compared with 62.5% for local `medgemma:27b`.
+- Added strict case-level model comparison. Gemini improved matched-image accuracy
+  by 34.2 points over MedGemma (41 helpful, 0 harmful paired flips; p<0.001), and
+  also showed positive within-model image grounding versus no image (+8.3 points,
+  p=0.013) and a mismatched image (+6.7 points, p=0.039).
+- The result remains a public-case research screen. Gemini's 90.0% image-plus-task
+  score creates a substantial pretraining-contamination or case-memorization risk;
+  private image-essential evaluation is required before architecture or clinical
+  conclusions. See the
+  [paired comparison report](medgemma_eval/reference_results/2026-09-17-medgemma-vs-gemini.md).
+
+### v0.2.0 (2026-09-16)
+
+- Added an image-focused four-arm ablation: proxy context only, matched image,
+  subtype-matched wrong image, and image only. This avoids treating the original
+  question's embedded formal report as visual evidence.
+- Completed all 480 responses for 120 cases. Matched images scored 62.5%, compared
+  with 65.0% without an image and 66.7% with a mismatched image; image-only accuracy
+  was 25.8% and was not significantly above 20% five-choice chance (`p=0.072`).
+- Added paired grounding diagnostics, wrong-image controls, subtype reports, and a
+  documented decision protocol for comparing specialist image models with a fixed
+  MedGemma reasoner. See the
+  [visual-ablation report](medgemma_eval/reference_results/2026-09-16-medgemma-27b-visual-ablation.md).
+- The proxy context is not clinician-redacted, and publication images are not native
+  DICOM volumes or whole-slide images. Results support a specialist-model proof of
+  concept, not clinical deployment.
+
+### v0.1.0 (2026-09-16)
+
+- Added an isolated [`medgemma_eval/`](medgemma_eval/README.md) harness for paired
+  text-only and text-plus-image evaluation of the local Ollama `medgemma:27b` model
+  on all 120 extended NEJM cases.
+- Added deterministic A–E scoring, per-subtype and per-task aggregation, Wilson 95%
+  intervals, image helpful/harmful analysis, resumable JSONL records, image checksum
+  caching, and an all-subtype smoke cohort.
+- Recorded a complete 120-case reference run: 72.5% text-only and 70.8% multimodal
+  accuracy overall; see the
+  [reproducible result and limitations](medgemma_eval/reference_results/2026-09-16-medgemma-27b.md).
+- This is a research benchmark only. It does not establish clinical safety or
+  authorize diagnostic use; small subtypes remain descriptive and require cautious
+  interpretation.
+
 
 ## Contents
 - [Install](#install)
@@ -105,5 +171,3 @@ BIBTEX Citation
       primaryClass={cs.HC}
 }
 ```
-
-
