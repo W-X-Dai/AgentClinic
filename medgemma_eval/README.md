@@ -227,7 +227,7 @@ is compatible with pretraining contamination or case memorization. Add a task-an
 choices-without-image control and a private image-essential holdout before deciding
 that a generalist model can replace modality specialists.
 
-## RTX Pro 6000 vLLM matrix
+## vLLM model matrix (RTX Pro 6000 / A100)
 
 The checked-in [`vllm_models.example.json`](vllm_models.example.json) describes the
 11 checkpoint directories supplied on the target host. The matrix runner starts one
@@ -238,10 +238,19 @@ checkpoint; add `--stop-on-error` when debugging a single model. The matrix reco
 also captures the GPU/driver, Python/platform, vLLM CLI/API versions, inspected local
 checkpoint metadata, and exact launch command.
 
+For an NVIDIA A100 80GB host, use
+[`vllm_models.a100.json`](vllm_models.a100.json). It removes the RTX Pro-specific
+Nemotron `--moe-backend triton` workaround and attempts all 11 supplied checkpoints.
+Memory-tight models use a 4096-token limit, eager execution, and one concurrent
+sequence. Nemotron NVFP4 remains enabled as a hardware-compatibility probe: its
+expected A100 startup failure must not be interpreted as a diagnostic-accuracy
+result. The matrix records that failure and proceeds to later models.
+
 The capability split is intentional:
 
 - Image arms: GLM-4.5V, both MedGemma checkpoints, both Nemotron Omni checkpoints,
-  and Qwen2.5-VL.
+  Qwen2.5-VL, and the locally detected Gemma 4 checkpoint. On A100, Nemotron NVFP4
+  is a compatibility probe rather than an expected accuracy run.
 - Context-only control: DeepSeek-R1-Distill-Qwen, GPT-OSS 20B/120B, and
   Qwen2.5-32B-Instruct.
 - `gemma-4-31b`: configured as `auto`; the target host's `config.json` and processor
@@ -257,13 +266,16 @@ nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 vllm --version
 
 python3 medgemma_eval/download_images.py
-python3 medgemma_eval/run_vllm_matrix.py --dry-run
+python3 medgemma_eval/run_vllm_matrix.py \
+  --manifest medgemma_eval/vllm_models.a100.json \
+  --dry-run
 ```
 
 Start with one small VLM and inspect its smoke/result/log files:
 
 ```bash
 python3 medgemma_eval/run_vllm_matrix.py \
+  --manifest medgemma_eval/vllm_models.a100.json \
   --only medgemma-4b-it \
   --run-id 20260917-medgemma-4b
 ```
@@ -273,19 +285,20 @@ first run:
 
 ```bash
 python3 medgemma_eval/run_vllm_matrix.py \
-  --run-id 20260917-rtx-pro-6000
+  --manifest medgemma_eval/vllm_models.a100.json \
+  --run-id 20260917-a100
 ```
 
 Summarize all completed models, then optionally produce a diagnosis-only report:
 
 ```bash
 python3 medgemma_eval/analyze_vllm_matrix.py \
-  medgemma_eval/results/vllm-matrix/20260917-rtx-pro-6000/matrix-run.json
+  medgemma_eval/results/vllm-matrix/20260917-a100/matrix-run.json
 
 python3 medgemma_eval/analyze_vllm_matrix.py \
-  medgemma_eval/results/vllm-matrix/20260917-rtx-pro-6000/matrix-run.json \
+  medgemma_eval/results/vllm-matrix/20260917-a100/matrix-run.json \
   --task-types diagnosis \
-  --output-dir medgemma_eval/results/vllm-matrix/20260917-rtx-pro-6000/diagnosis-summary
+  --output-dir medgemma_eval/results/vllm-matrix/20260917-a100/diagnosis-summary
 ```
 
 For an already running vLLM endpoint, bypass orchestration and call the runner

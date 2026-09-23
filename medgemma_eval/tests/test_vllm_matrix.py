@@ -18,6 +18,19 @@ from medgemma_eval.run_vllm_matrix import (
 
 
 class VLLMMatrixTests(unittest.TestCase):
+    def test_a100_manifest_attempts_all_models_without_rtx_workaround(self) -> None:
+        manifest = load_manifest(
+            AGENTCLINIC_ROOT / "medgemma_eval" / "vllm_models.a100.json"
+        )
+        models = {model["name"]: model for model in manifest["models"]}
+        bf16 = models["nemotron-3-nano-omni-30b-bf16"]
+        nvfp4 = models["nemotron-3-nano-omni-30b-nvfp4"]
+
+        self.assertEqual(bf16["max_model_len"], 4096)
+        self.assertNotIn("--moe-backend", bf16["serve_args"])
+        self.assertTrue(nvfp4.get("enabled", True))
+        self.assertEqual(len(manifest["models"]), 11)
+
     def test_detects_vision_from_local_config(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             model = Path(directory)

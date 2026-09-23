@@ -1,0 +1,124 @@
+  {
+    "schema_version": 1,
+    "server": {
+      "command": ["vllm", "serve"],
+      "host": "127.0.0.1",
+      "port": 8000,
+      "tensor_parallel_size": 1,
+      "gpu_memory_utilization": 0.95,
+      "max_model_len": 8192,
+      "startup_timeout_seconds": 1200
+    },
+    "models": [
+      {
+        "name": "deepseek-r1-distill-qwen-32b",
+        "path": "/mnt/models/deepseek-r1-distill-qwen-32b",
+        "vision": false,
+        "max_model_len": 4096,
+        "serve_args": ["--enforce-eager", "--max-num-seqs", "1"]
+      },
+      {
+        "name": "glm-4.5v-awq",
+        "path": "/mnt/models/glm-4.5v-awq",
+        "vision": true,
+        "max_model_len": 4096,
+        "serve_args": [
+          "--limit-mm-per-prompt.image",
+          "1",
+          "--enforce-eager",
+          "--max-num-seqs",
+          "1"
+        ]
+      },
+      {
+        "name": "gpt-oss-20b",
+        "path": "/mnt/models/gpt-oss-20b",
+        "vision": false,
+        "serve_args": []
+      },
+      {
+        "name": "gpt-oss-120b",
+        "path": "/mnt/models/gpt-oss-120b",
+        "vision": false,
+        "max_model_len": 4096,
+        "serve_args": ["--enforce-eager", "--max-num-seqs", "1"]
+      },
+      {
+        "name": "medgemma-27b-it",
+        "path": "/mnt/models/medgemma-27b-it",
+        "vision": true,
+        "max_model_len": 4096,
+        "serve_args": [
+          "--limit-mm-per-prompt.image",
+          "1",
+          "--enforce-eager",
+          "--max-num-seqs",
+          "1"
+        ]
+      },
+      {
+        "name": "medgemma-4b-it",
+        "path": "/mnt/models/medgemma-4b-it",
+        "vision": true,
+        "serve_args": ["--limit-mm-per-prompt.image", "1"]
+      },
+      {
+        "name": "nemotron-3-nano-omni-30b-bf16",
+        "path": "/mnt/models/nemotron-3-nano-omni-30b-bf16",
+        "vision": true,
+        "max_model_len": 4096,
+        "serve_args": [
+          "--limit-mm-per-prompt.image",
+          "1",
+          "--trust-remote-code",
+          "--reasoning-parser",
+          "nemotron_v3",
+          "--enforce-eager",
+          "--max-num-seqs",
+          "1"
+        ]
+      },
+      {
+        "name": "nemotron-3-nano-omni-30b-nvfp4",
+        "path": "/mnt/models/nemotron-3-nano-omni-30b-nvfp4",
+        "vision": true,
+        "max_model_len": 4096,
+        "serve_args": [
+          "--limit-mm-per-prompt.image",
+          "1",
+          "--trust-remote-code",
+          "--reasoning-parser",
+          "nemotron_v3",
+          "--kv-cache-dtype",
+          "fp8",
+          "--enforce-eager",
+          "--max-num-seqs",
+          "1"
+        ]
+      },
+      {
+        "name": "qwen2.5-32b-instruct",
+        "path": "/mnt/models/qwen2.5-32b-instruct",
+        "vision": false,
+        "max_model_len": 4096,
+        "serve_args": ["--enforce-eager", "--max-num-seqs", "1"]
+      },
+      {
+        "name": "qwen2.5-vl-72b-instruct-awq",
+        "path": "/mnt/models/qwen2.5-vl-72b-instruct-awq",
+        "vision": true,
+        "serve_args": [
+          "--limit-mm-per-prompt.image",
+          "1",
+          "--dtype",
+          "half"
+        ]
+      },
+      {
+        "name": "gemma-4-31b",
+        "path": "/mnt/models/gemma-4-31b",
+        "vision": "auto",
+        "serve_args": []
+      }
+    ]
+  }

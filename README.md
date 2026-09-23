@@ -20,6 +20,14 @@
 
 ## Local research extension version
 
+### v0.4.1 (2026-09-17)
+
+- Added an A100 80GB-specific vLLM manifest. It attempts all 11 supplied checkpoints,
+  omits the RTX Pro-only Nemotron Triton workaround, and applies conservative
+  single-sequence/eager settings to memory-tight models. The Blackwell-oriented
+  Nemotron NVFP4 entry is retained as an explicit hardware-compatibility probe; a
+  startup failure is recorded and does not abort the remaining matrix.
+
 ### v0.4.0 (2026-09-17)
 
 - Added a portable vLLM matrix harness for the RTX Pro 6000 host. It can inspect
@@ -34,7 +42,8 @@
   including special RTX Pro flags for Nemotron Omni and automatic local-config
   inspection for the ambiguous `gemma-4-31b` directory.
 - This version adds reproducible tooling only; no result is claimed until it is run
-  on the target host. See the [vLLM instructions](medgemma_eval/README.md#rtx-pro-6000-vllm-matrix).
+  on the target host. See the
+  [vLLM instructions](medgemma_eval/README.md#vllm-model-matrix-rtx-pro-6000--a100).
 
 ### v0.3.0 (2026-09-17)
 
