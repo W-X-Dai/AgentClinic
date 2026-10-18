@@ -2,12 +2,24 @@
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from .ollama_client import CHOICE_SCHEMA
+
+# Gemini 3.5+ is configured only through ``thinking_config.thinking_level``;
+# ``temperature``/``top_p``/``top_k`` and ``thinking_budget`` are deprecated there.
+THINKING_LEVELS = ("minimal", "low", "medium", "high")
+DEFAULT_THINKING_LEVEL = "low"
+THINKING_LEVEL_ENV = "AGENTCLINIC_GEMINI_THINKING_LEVEL"
+_THINKING_LEVEL_ONLY_FROM = (3, 5)
+_MIN_OUTPUT_TOKENS = 256
+# Thinking tokens share ``max_output_tokens`` with the short JSON answer; these
+# floors keep the answer from being truncated at each level.
+_THINKING_OUTPUT_FLOOR = {"minimal": 512, "low": 1024, "medium": 2048, "high": 4096}
 
 
 @dataclass(frozen=True)
@@ -38,6 +50,45 @@ def load_env_file(path: Path) -> dict[str, str]:
             value = value[1:-1]
         values[key] = value
     return values
+
+
+def validate_thinking_level(value: str | None) -> str:
+    """Normalize a thinking level, defaulting to ``DEFAULT_THINKING_LEVEL``."""
+    normalized = (value or "").strip().lower() or DEFAULT_THINKING_LEVEL
+    if normalized not in THINKING_LEVELS:
+        raise ValueError(
+            f"thinking level must be one of {', '.join(THINKING_LEVELS)}; got {value!r}"
+        )
+    return normalized
+
+
+def uses_thinking_level(model: str) -> bool:
+    """Return True for Gemini 3.5+ model names (``gemini-3.5-*``, ``gemini-4``)."""
+    match = re.match(r"^(?:models/)?gemini-(\d+)(?:\.(\d+))?", model.lower())
+    if not match:
+        return False
+    version = (int(match.group(1)), int(match.group(2) or 0))
+    return version >= _THINKING_LEVEL_ONLY_FROM
+
+
+def generation_settings(
+    model: str, thinking_level: str | None, max_output_tokens: int
+) -> dict[str, Any]:
+    """Describe the generation settings actually sent for one request.
+
+    Older Gemini models keep the previous request (no sampling or thinking
+    fields), so earlier runs remain reproducible. No model receives temperature.
+    """
+    settings: dict[str, Any] = {
+        "max_output_tokens": max(_MIN_OUTPUT_TOKENS, max_output_tokens)
+    }
+    if uses_thinking_level(model):
+        level = validate_thinking_level(thinking_level)
+        settings["thinking_level"] = level
+        settings["max_output_tokens"] = max(
+            settings["max_output_tokens"], _THINKING_OUTPUT_FLOOR[level]
+        )
+    return settings
 
 
 def _finish_reason(response: Any) -> str:
@@ -93,6 +144,7 @@ class GeminiClient:
         image: Path | None,
         seed: int,
         max_output_tokens: int,
+        thinking_level: str | None = None,
     ) -> GeminiResponse:
         types = self._types
         parts: list[Any] = [types.Part.from_text(text=user_prompt)]
@@ -103,9 +155,16 @@ class GeminiClient:
                 types.Part.from_bytes(data=image.read_bytes(), mime_type=mime_type)
             )
 
+        settings = generation_settings(model, thinking_level, max_output_tokens)
+        thinking_config = (
+            types.ThinkingConfig(thinking_level=settings["thinking_level"])
+            if "thinking_level" in settings
+            else None
+        )
         config = types.GenerateContentConfig(
             system_instruction=system_prompt,
-            max_output_tokens=max(256, max_output_tokens),
+            max_output_tokens=settings["max_output_tokens"],
+            thinking_config=thinking_config,
             seed=seed,
             response_mime_type="application/json",
             response_json_schema=CHOICE_SCHEMA,

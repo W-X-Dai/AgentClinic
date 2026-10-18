@@ -20,6 +20,24 @@
 
 ## Local research extension version
 
+### v0.5.0 (2026-10-07)
+
+- Updated the Gemini adapter for Google's parameter deprecations while staying on
+  `generateContent`. Gemini 3.5+ requests now send only
+  `thinking_config.thinking_level` (default `low`; override with `--thinking-level`
+  or `AGENTCLINIC_GEMINI_THINKING_LEVEL`, validated as `minimal`/`low`/`medium`/`high`)
+  and never send `temperature`, `top_p`, `top_k`, or `thinking_budget`. Older Gemini
+  requests are unchanged; no Gemini request has ever sent `temperature`.
+- Thinking tokens count toward `max_output_tokens`, so 3.5+ requests use at least
+  512/1024/2048/4096 output tokens for minimal/low/medium/high while keeping the
+  existing JSON response schema. Each result row now records the sent
+  `thinking_level` and effective `max_output_tokens`.
+- The v0.3.0 `gemini-3.6-flash` results used the API default thinking level, so they
+  are not directly comparable with new `low` runs; write new runs to a new output file
+  because the resume key does not include the thinking level.
+- Verification: `python -m unittest discover -s medgemma_eval/tests` (38 tests) and
+  `ruff check`/`ruff format --check` on `medgemma_eval` passed with the backend venv.
+
 ### v0.4.1 (2026-09-17)
 
 - Added an A100 80GB-specific vLLM manifest. It attempts all 11 supplied checkpoints,

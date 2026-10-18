@@ -27,7 +27,14 @@ if __package__ in (None, ""):
         permuted_options,
         select_cases,
     )
-    from medgemma_eval.gemini_client import GeminiClient, load_env_file
+    from medgemma_eval.gemini_client import (
+        THINKING_LEVEL_ENV,
+        THINKING_LEVELS,
+        GeminiClient,
+        generation_settings,
+        load_env_file,
+        validate_thinking_level,
+    )
     from medgemma_eval.ollama_client import parse_choice
     from medgemma_eval.run_benchmark import (
         IMAGE_MODES,
@@ -50,7 +57,14 @@ else:
         permuted_options,
         select_cases,
     )
-    from .gemini_client import GeminiClient, load_env_file
+    from .gemini_client import (
+        THINKING_LEVEL_ENV,
+        THINKING_LEVELS,
+        GeminiClient,
+        generation_settings,
+        load_env_file,
+        validate_thinking_level,
+    )
     from .ollama_client import parse_choice
     from .run_benchmark import (
         IMAGE_MODES,
@@ -94,6 +108,14 @@ def build_parser() -> argparse.ArgumentParser:
         default=1024,
         help="output budget including Gemini reasoning tokens",
     )
+    parser.add_argument(
+        "--thinking-level",
+        help=(
+            "Gemini 3.5+ thinking_level "
+            f"({'/'.join(THINKING_LEVELS)}); defaults to ${THINKING_LEVEL_ENV} "
+            "or low; ignored for older models"
+        ),
+    )
     parser.add_argument("--timeout", type=float, default=600.0)
     parser.add_argument("--download-timeout", type=float, default=30.0)
     parser.add_argument("--retries", type=int, default=3)
@@ -130,6 +152,13 @@ def main(argv: list[str] | None = None) -> int:
         or file_env.get("GEMINI_MODEL", "").strip()
         or "gemini-2.5-flash"
     )
+    try:
+        thinking_level = validate_thinking_level(
+            args.thinking_level or os.environ.get(THINKING_LEVEL_ENV)
+        )
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
+    settings = generation_settings(model, thinking_level, args.num_predict)
     client = GeminiClient(api_key, args.timeout)
     model_info = client.model_info(model)
 
@@ -146,7 +175,9 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("filters selected zero cases")
     print(
         f"Preflight OK: {len(all_cases)} cases, {len(selected)} selected, "
-        f"model={model}, modes={','.join(modes)}"
+        f"model={model}, modes={','.join(modes)}, "
+        f"thinking_level={settings.get('thinking_level') or 'not sent'}, "
+        f"max_output_tokens={settings['max_output_tokens']}"
     )
     if args.preflight_only:
         return 0
@@ -167,7 +198,11 @@ def main(argv: list[str] | None = None) -> int:
         "prompt_version": PROMPT_VERSION,
         "dataset_sha256": dataset_sha,
         "seed": args.seed,
+        # Recorded as sent: temperature is never sent; thinking_level only for
+        # Gemini 3.5+; max_output_tokens includes any thinking-token floor.
         "temperature": None,
+        "thinking_level": settings.get("thinking_level"),
+        "max_output_tokens": settings["max_output_tokens"],
         "num_predict": args.num_predict,
         "host": socket.gethostname(),
         "platform": platform.platform(),
@@ -228,6 +263,7 @@ def main(argv: list[str] | None = None) -> int:
                                 image=image,
                                 seed=args.seed,
                                 max_output_tokens=args.num_predict,
+                                thinking_level=thinking_level,
                             )
                             predicted, parse_strategy = parse_choice(
                                 response.content, options

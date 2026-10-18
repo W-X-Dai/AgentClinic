@@ -149,6 +149,15 @@ Gemini 3.5 and newer may consume reasoning tokens before returning the short JSO
 answer, so its runner defaults to a 1024-token total output budget. This avoids
 counting truncated JSON as model quality while retaining failures in the denominator.
 
+For Gemini 3.5 and newer the runner sends only `thinking_config.thinking_level`
+(default `low`; set `--thinking-level` or `AGENTCLINIC_GEMINI_THINKING_LEVEL` to
+`minimal`, `low`, `medium`, or `high`; supported levels vary by model) and never sends
+`temperature`, `top_p`, `top_k`, or `thinking_budget`. The output budget is raised to
+at least 512/1024/2048/4096 tokens for those levels. Older Gemini models receive no
+thinking or sampling fields. Every row records the sent `thinking_level` and effective
+`max_output_tokens`; use a new `--output` file when changing the level because resume
+keys do not include it.
+
 Run only the 90 direct-diagnosis questions:
 
 ```bash
